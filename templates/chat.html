@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat with {{ friend.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #e3f2fd, #ffffff);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      background: #0d6efd;
+      color: #fff;
+      gap: 1rem;
+    }
+
+    .chat-header img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    .chat-header h5 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    #chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #f1f5f9;
+    }
+
+    .message {
+      max-width: 75%;
+      word-wrap: break-word;
+      position: relative;
+      padding: 10px 15px;
+      border-radius: 20px;
+      font-size: 15px;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .sent {
+      align-self: flex-end;
+      background: #0d6efd;
+      color: white;
+    }
+
+    .received {
+      align-self: flex-start;
+      background: #e0e0e0;
+      color: black;
+    }
+
+    .message .time {
+      display: block;
+      font-size: 11px;
+      margin-top: 5px;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .received .time {
+      color: #555;
+    }
+
+    .delete-icon {
+      position: absolute;
+      top: -8px;
+      right: -20px;
+      font-size: 16px;
+      color: red;
+      cursor: pointer;
+    }
+
+    .chat-footer {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: white;
+      border-top: 1px solid #ccc;
+    }
+
+    .chat-footer input {
+      flex: 1;
+      padding: 10px 15px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+    }
+
+    .chat-footer button {
+      border-radius: 50%;
+      padding: 10px 14px;
+      background: #0d6efd;
+      color: white;
+      border: none;
+    }
+
+    .chat-footer button:hover {
+      background: #084298;
+    }
+
+    .delete-popup {
+      position: fixed;
+      bottom: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      z-index: 9999;
+      width: 90%;
+      max-width: 320px;
+      display: none;
+      animation: popup 0.3s ease-out;
+    }
+
+    .popup-box {
+      padding: 20px;
+      text-align: center;
+    }
+
+    .popup-box button {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      font-weight: bold;
+      border-radius: 10px;
+      border: none;
+    }
+
+    .popup-box .btn-danger { background: #dc3545; color: white; }
+    .popup-box .btn-warning { background: #ffc107; color: black; }
+    .popup-box .btn-secondary { background: #6c757d; color: white; }
+
+    @keyframes popup {
+      from { transform: translateY(50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <img src="{{ url_for('static', filename='avatars/' + friend.avatar) }}" alt="Avatar">
+      <div>
+        <h5 class="mb-0">{{ friend.name }}</h5>
+        <small id="friend-status">Checking status...</small>
+      </div>
+    </div>
+
+    <div id="chat-box"></div>
+
+    <form id="chat-form" class="chat-footer" onsubmit="event.preventDefault(); sendMessage();">
+      <input type="text" id="messageInput" placeholder="Type your message...">
+      <button id="sendBtn"><i class='bi bi-send-fill'></i></button>
+    </form>
+  </div>
+
+  <input type="hidden" id="currentUserCode" value="{{ user.code }}">
+  <input type="hidden" id="friendCode" value="{{ friend.code }}">
+
+  <!-- Ringtone -->
+  <audio id="ringtone" src="{{ url_for('static', filename='ringtone.mp3') }}"></audio>
+
+  <!-- Delete popup -->
+  <div id="deleteModal" class="delete-popup">
+    <div class="popup-box">
+      <p>Delete this message?</p>
+      <button class="btn btn-danger" id="deleteMine">Delete for me</button>
+      <button class="btn btn-warning" id="deleteEveryone">Delete for everyone</button>
+      <button class="btn btn-secondary" id="cancelDelete">Cancel</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+    const currentUser = document.getElementById("currentUserCode").value;
+    const friendCode = document.getElementById("friendCode").value;
+    const chatBox = document.getElementById("chat-box");
+    const ringtone = document.getElementById("ringtone");
+    const room = [currentUser, friendCode].sort().join("-");
+
+    socket.emit("join", { user: currentUser, friend: friendCode });
+
+    let messages = JSON.parse(localStorage.getItem(room)) || [];
+
+    function saveMessages() {
+      localStorage.setItem(room, JSON.stringify(messages));
+    }
+
+    function renderMessages() {
+      chatBox.innerHTML = '';
+      messages.forEach((msg) => {
+        const div = document.createElement("div");
+        const isMine = msg.user === currentUser;
+        div.className = "message " + (isMine ? "sent" : "received");
+        div.dataset.id = msg.id;
+
+        div.innerHTML = `
+          ${msg.message}
+          <span class="time">${msg.time}</span>
+          <i class="bi bi-trash delete-icon" onclick="openDeleteMenu('${msg.id}', ${isMine})"></i>
+        `;
+
+        chatBox.appendChild(div);
+      });
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("messageInput");
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const id = Date.now().toString();
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const data = { user: currentUser, friend: friendCode, message: msg, id, time };
+
+      messages.push(data);
+      saveMessages();
+      renderMessages();
+      socket.emit("send_message", data);
+      input.value = "";
+    }
+
+    function deleteForMe(id) {
+      messages = messages.filter(msg => msg.id !== id);
+      saveMessages();
+      renderMessages();
+      closeDeletePopup();
+    }
+
+    function deleteForEveryone(id) {
+      socket.emit("delete_message", { id, user: currentUser, friend: friendCode });
+      deleteForMe(id);
+    }
+
+    socket.on("receive_message", (data) => {
+      if (!messages.find(msg => msg.id === data.id)) {
+        messages.push(data);
+        saveMessages();
+        renderMessages();
+
+        // Try playing the ringtone
+        try {
+          ringtone.play().catch(err => {
+            console.warn("Ringtone blocked (no user interaction yet):", err.message);
+          });
+        } catch (e) {
+          console.warn("Ringtone error:", e.message);
+        }
+      }
+    });
+
+    socket.on("message_deleted", ({ id }) => {
+      deleteForMe(id);
+    });
+
+    // ========== Delete Popup Logic ==========
+    let selectedDeleteId = null;
+    let isOwnMessage = false;
+
+    function openDeleteMenu(id, mine) {
+      selectedDeleteId = id;
+      isOwnMessage = mine;
+
+      const modal = document.getElementById("deleteModal");
+      modal.classList.remove("d-none");
+
+      document.getElementById("deleteEveryone").style.display = mine ? 'block' : 'none';
+    }
+
+    function closeDeletePopup() {
+      document.getElementById("deleteModal").classList.add("d-none");
+    }
+
+    document.getElementById("deleteMine").addEventListener("click", () => {
+      if (selectedDeleteId) deleteForMe(selectedDeleteId);
+    });
+
+    document.getElementById("deleteEveryone").addEventListener("click", () => {
+      if (selectedDeleteId && isOwnMessage) deleteForEveryone(selectedDeleteId);
+    });
+
+    document.getElementById("cancelDelete").addEventListener("click", () => {
+      closeDeletePopup();
+    });
+
+    // ========== Online/Offline Status ==========
+    socket.emit("check_online_status", { user: currentUser, friend: friendCode });
+
+    socket.on("online_status", ({ friend, online }) => {
+      const statusText = document.querySelector(".chat-header small");
+      if (friend === friendCode && statusText) {
+        statusText.innerHTML = online
+          ? `Online <i class="bi bi-circle-fill text-success"></i>`
+          : `Offline <i class="bi bi-circle-fill text-secondary"></i>`;
+      }
+    });
+
+    // ========== Input Events ==========
+    document.getElementById("sendBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      sendMessage();
+    });
+
+    document.getElementById("messageInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Allow ringtone to play after user interacts
+    document.addEventListener("click", () => {
+      ringtone.play().catch(() => {});
+    }, { once: true });
+
+    // Initial load
+    renderMessages();
+  </script>
+
+
+</body>
+</html>

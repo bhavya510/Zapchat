@@ -1,0 +1,39 @@
+[
+  {
+    "name": "Bhavya ",
+    "dob": "2011-10-05",
+    "bio": "Hello! II am Software developer",
+    "thought": "Life is to achieve our goals",
+    "avatar": "avatar2.png",
+    "code": "9634522908",
+    "password": "51011",
+    "friends": [
+      "9078341443",
+      "1709004760"
+    ]
+  },
+  {
+    "name": "Nibha ",
+    "dob": "2018-05-02",
+    "bio": "",
+    "thought": "Nothing",
+    "avatar": "avatar4.png",
+    "code": "9078341443",
+    "password": "2518",
+    "friends": [
+      "9634522908"
+    ]
+  },
+  {
+    "avatar": "avatar1.png",
+    "bio": "",
+    "code": "1709004760",
+    "dob": "2000-12-01",
+    "name": "Jack",
+    "thought": "Nothing is best",
+    "password": "12345678",
+    "friends": [
+      "9634522908"
+    ]
+  }
+]

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Profile - ZoopChat</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container mt-5 col-md-6">
+    <h2 class="text-center mb-4"><i class="bi bi-person-plus-fill text-primary"></i> Create Your ZoopChat Profile</h2>
+
+    <form action="/register" method="post">
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-person"></i> Name</label>
+        <input type="text" name="name" class="form-control" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-calendar"></i> Date of Birth</label>
+        <input type="date" name="dob" class="form-control" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-chat-left-quote"></i> Thought <span class="text-danger">*</span></label>
+        <input type="text" name="thought" class="form-control" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-info-circle"></i> Bio (Optional)</label>
+        <textarea name="bio" class="form-control" rows="2"></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label"><i class="bi bi-image"></i> Select Your Avatar</label>
+        <div class="d-flex gap-3">
+          {% for i in range(1,5) %}
+          <label class="text-center">
+            <input type="radio" name="avatar" value="avatar{{i}}.png" required hidden>
+            <img src="{{ url_for('static', filename='avatars/avatar' ~ i ~ '.png') }}" class="rounded-circle border avatar-option" width="80" height="80">
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="d-grid mt-4">
+        <button class="btn btn-primary"><i class="bi bi-arrow-right-circle"></i> Continue</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const avatars = document.querySelectorAll('input[name="avatar"]');
+    const imgs = document.querySelectorAll('.avatar-option');
+
+    avatars.forEach((input, i) => {
+      input.addEventListener('change', () => {
+        imgs.forEach(img => img.classList.remove('border-primary', 'border-3'));
+        imgs[i].classList.add('border-primary', 'border-3');
+      });
+    });
+  </script>
+</body>
+</html>

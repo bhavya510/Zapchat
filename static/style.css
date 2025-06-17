@@ -1,0 +1,23 @@
+body.splash-screen {
+  background: linear-gradient(135deg, #e0f7fa, #f3e5f5);
+  height: 100vh;
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  animation: fadeIn 1s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+h1 {
+  font-size: 3rem;
+  color: #0d6efd;
+  animation: pop 1s ease;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
